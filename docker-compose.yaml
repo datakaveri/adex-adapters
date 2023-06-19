@@ -6,7 +6,7 @@ networks:
 
 services:
   get-farmer-crop-data:
-    image: adex/get-farmer-crop-data:latest
+    image: ghcr.io/datakaveri/adex/adex-get-farmer-crop-data:1.0.0
     volumes:
       - ./secrets/config.ini:/usr/share/app/secrets/config.ini
     restart: on-failure
