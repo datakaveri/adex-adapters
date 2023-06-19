@@ -1,0 +1,19 @@
+version: '3.7'
+
+networks:
+  adapter-net:
+    driver: bridge
+
+services:
+  get-farmer-crop-data:
+    image: adex/get-farmer-crop-data:latest
+    volumes:
+      - ./secrets/config.ini:/usr/share/app/secrets/config.ini
+    restart: on-failure
+    networks: 
+      - adapter-net
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "5m"

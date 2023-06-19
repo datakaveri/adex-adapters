@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: get-farmer-crop-data
+  name: get-farmer-crop-data
+  namespace: adex-adapters
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: get-farmer-crop-data
+  template:
+    metadata:
+      labels:
+        app: get-farmer-crop-data
+    spec:
+      containers:
+        - name: get-farmer-crop-data
+          image: ghcr.io/datakaveri/adex/adex-get-farmer-crop-data:1.0.0
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 150m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/app/secrets/config.ini
+              subPath: config.ini
+      volumes:
+        - name: config
+          secret:
+            secretName: adex-adapter-config
+
+            #     imagePullSecrets:
+            # - name: gitcr
+ 
+
