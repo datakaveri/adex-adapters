@@ -1,14 +1,15 @@
 import datetime
 import json
 import logging
-import re
+import sys
 import urllib.error
 from configparser import ConfigParser
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-
+import re
 import pika
 import xmltodict
+from dateutil import parser
 
 config = ConfigParser(interpolation=None)
 config.read("./secrets/config.ini")
@@ -289,17 +290,42 @@ class get_farmer_data:
             else:
                 dictionary['statusCode'] = status
                 json_array = response_json["Data"]
-
+                
+                transformed_records = []
                 for json_object in json_array:
+                    
+                    transformed_record ={
+                        "name": json_object.get("FarmerName", None),
+                        "phone": json_object.get("MobileNo", None),
+                        "year ": json_object.get("FinYear", None),
+                        "cropSeason": json_object.get("Season", None),
+                        "districtName": json_object.get("District", None),
+                        "subdistrictName": json_object.get("Mandal", None),
+                        "clusterName": json_object.get("Cluster", None),
+                        "villageName": json_object.get("Village", None),
+                        "landIdentityInfo": {
+                            "baseSurveyNumber": json_object.get("BaseSurveyNo", None),
+                            "surveyNumber": json_object.get("SurveyNo", None)
+                        },
+                        "landExtent": json_object.get("SurveyExtent", None),
+                        "irrigationSource": json_object.get("SourceofIrrigation", None),
+                        "cropNameLocal": json_object.get("CropName", None),
+                        "cropVarietyName": json_object.get("CropVarietyName", None),
+                        "cropArea": json_object.get("CropSown_Guntas", None)
+                        }
+                    
+                                        
                     observation_date = json_object.get("CropInfo_Dt", None)
                     
                     try:
-                        json_object["observationDateTime"] = f"{parser.parse(observation_date).isoformat()}+05:30"
+                        transformed_record["observationDateTime"] = f"{parser.parse(observation_date).isoformat()}+05:30"
+                        
                     except Exception:
-                        json_object["observationDateTime"] = observation_date
-                    del json_object["CropInfo_Dt"]
+                        transformed_record["observationDateTime"] = observation_date
+                        
+                    transformed_records.append(transformed_record)
 
-                dictionary["results"] = json_array
+                dictionary["results"] = transformed_records
 
         return dictionary
         
@@ -320,4 +346,3 @@ if __name__ == '__main__':
     serverconfigure = RabbitMqServerConfigure( username, password, host, port, vhost, queue)
     server = rabbitmqServer(server=serverconfigure)
     server.startserver(fd.process_request)
-
