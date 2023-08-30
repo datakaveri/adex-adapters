@@ -12,7 +12,7 @@ import xmltodict
 from dateutil import parser
 
 config = ConfigParser(interpolation=None)
-config.read("./secrets/config_file.ini")
+config.read("./secrets/config.ini")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 time_format = "%Y-%m-%dT%H:%M:%SZ"
