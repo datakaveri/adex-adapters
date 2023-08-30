@@ -6,6 +6,7 @@ import urllib.error
 from configparser import ConfigParser
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+import requests
 import re
 import pika
 import xmltodict
@@ -338,3 +339,4 @@ if __name__ == '__main__':
     serverconfigure = RabbitMqServerConfigure( username, password, host, port, vhost, queue)
     server = rabbitmqServer(server=serverconfigure)
     server.startserver(fd.process_request)
+

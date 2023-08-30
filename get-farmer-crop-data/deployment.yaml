@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: get-farmer-crop-data
-          image: ghcr.io/datakaveri/adex-get-farmer-crop-data:1.0.2
+          image: ghcr.io/datakaveri/adex-get-farmer-crop-data:1.0.3
           imagePullPolicy: Always
           resources:
             limits:
