@@ -6,7 +6,6 @@ import urllib.error
 from configparser import ConfigParser
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-import requests
 import re
 import pika
 import xmltodict
@@ -206,11 +205,19 @@ class get_farmer_data:
 
 
     def getData(self, end_dict):
-        dictionary = {}
+
+        """
+        Fetching from seeding api
+        :params end_point: end point which consists of attribute or temporal query
+        :return None:
+        """
+
+        dictionary ={}
 
         try:
+            
             url = self.url
-
+            
             payload =  """<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
                             <soap:Body>
                                 <Get_Farmer_CropData_ByPPBNo xmlns="http://tempuri.org/">
@@ -222,38 +229,38 @@ class get_farmer_data:
                                 </Get_Farmer_CropData_ByPPBNo>
                             </soap:Body>
                         </soap:Envelope>""".format(self.iudx_username, self.iudx_password, end_dict["PPBNO"], end_dict["StartDate"], end_dict["EndDate"])
+    
             headers = {
                 'Content-Type': 'text/xml;charset=UTF-8'
                 }
 
-            response = requests.post(url, data=payload, headers=headers)
-            status = response.status_code
-            dictionary = self.fetch_response(status, response.text, dictionary)
+            req = Request(url, payload.encode('utf-8'), headers=headers )
+            response = urlopen(req)
+            status = response.getcode()
 
-        except requests.exceptions.HTTPError as errh:
-            logging.error("An Http Error occurred: %s", errh)
-            dictionary['statusCode'] = 400  # Bad Request
-            dictionary['details'] = f"An Http Error occurred: {errh}"
+            dictionary = self.fetch_response(status, response, dictionary)
 
-        except requests.exceptions.ConnectionError as errc:
-            logging.error("An Error Connecting to the API occurred: %s", errc)
-            dictionary['statusCode'] = 503  # Service Unavailable
-            dictionary['details'] = f"An Error Connecting to the API occurred: {errc}"
+        except urllib.error.HTTPError as eh:
+            
+            logging.error("An Http Error occurred: {}".format(eh))
+            
+            dictionary["statusCode"] = eh.code 
+            dictionary["details"] =  eh.reason
+            
+        except urllib.error.URLError as eu:
+            
+            logging.error("An URL Error occurred: {}".format(eu))
+            
+            dictionary["statusCode"] = eu.reason.args[0]
+            dictionary["details"] =  str(eu.reason)
 
-        except requests.exceptions.Timeout as errt:
-            logging.error("A Timeout Error occurred: %s", errt)
-            dictionary['statusCode'] = 504  # Gateway Timeout
-            dictionary['details'] = f"A Timeout Error occurred: {errt}"
+        except Exception as e:
+            
+            logging.error("An Unknown Error occurred: {}".format(e))
+            
+            dictionary["statusCode"] = 400
+            dictionary["details"] = 'An unknown error occurred while processing the request on the server'
 
-        except requests.exceptions.RequestException as err:
-            logging.error("An Unknown Error occurred: %s", err)
-            dictionary['statusCode'] = 500  # Internal Server Error
-            dictionary['details'] = f"An Internal server Error occurred: {err}"
-
-        except Exception as oe:
-            logging.error("An Unknown Error occurred: %s", oe)
-            dictionary['statusCode'] = 400  # Not Found
-            dictionary['details'] = f"An unknown error occured: {oe}"
 
         server.publish(dictionary, self.rout_key, self.corr_id, self.method)
 
@@ -268,7 +275,7 @@ class get_farmer_data:
         :return: Updated dictionary with status and results/details
         """
         
-        resp_dict = xmltodict.parse(response)
+        resp_dict = xmltodict.parse(response.read())
 
         if status == 200:
             soap = resp_dict["soap:Envelope"]["soap:Body"]
@@ -302,7 +309,7 @@ class get_farmer_data:
                         },
                         "landExtent": json_object.get("SurveyExtent", None),
                         "irrigationSource": json_object.get("SourceofIrrigation", None),
-                        "cropNameLocal": json_object.get("CropName", None),
+                        "cropNameCommon": json_object.get("CropName", None),
                         "cropVarietyName": json_object.get("CropVarietyName", None),
                         "cropArea": json_object.get("CropSown_Guntas", None)
                         }
@@ -321,7 +328,7 @@ class get_farmer_data:
                 dictionary["results"] = transformed_records
 
         return dictionary
-      
+        
         
 if __name__ == '__main__':
 
@@ -339,4 +346,3 @@ if __name__ == '__main__':
     serverconfigure = RabbitMqServerConfigure( username, password, host, port, vhost, queue)
     server = rabbitmqServer(server=serverconfigure)
     server.startserver(fd.process_request)
-
